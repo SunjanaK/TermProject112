@@ -218,7 +218,8 @@ def init(data):
     data.play3 = [] #G string
     data.play4 = [] #C string
     #color of circle
-
+    data.colorlist = []
+    data.end = 0
 
     data.points = 0
 
@@ -248,40 +249,38 @@ def timerFired(data):
     for item3 in data.play3:
          # have letter move progressively down screen
 
-        if item3[1] >= 169:
+        if item3[1] >= 169 and item3[2] != "":
             if item3[2] in set(tester()):
-                data.color = "green"
+                data.colorlist.append("green")
                 data.points += 1
             else:
-                data.color = "red"
+                data.colorlist.append("red")
 
 
             data.play3.remove(item3)
 
 
         else:
-            data.color = "purple"
+            data.colorlist.append("purple")
             item3[1] += 5
 
 
     for item4 in data.play4:
          # have letter move progressively down screen
 
-        if item4[1] >= 169:
+        if item4[1] >= 169 and item4[2] != "":
             if item4[2] in set(tester()):
-                data.color = "green"
-                print("changed!", data.color)
+                data.colorlist.append("green")
                 data.points += 1
             else:
-                data.color = "red"
-                print("changed!", data.color)
+                data.colorlist.append("red")
 
 
             data.play4.remove(item4)
 
 
         else:
-            data.color = "purple"
+            data.colorlist.append("purple")
             item4[1] += 5
 
     # for item2 in data.play2:
@@ -325,9 +324,15 @@ def timerFired(data):
     data.counter += 1
 def redrawAll(canvas, data):
     #creating the four circles
-    print(data.color)
-    canvas.create_rectangle(0, 170, 400, 200, fill = data.color)
-    canvas.create_text(50, 50, text = data.points)
+
+    if "green" in data.colorlist:
+        canvas.create_rectangle(0, 170, 400, 200, fill = "green")
+    elif "red" in data.colorlist:
+        canvas.create_rectangle(0, 170, 400, 200, fill = "red")
+    else:
+        canvas.create_rectangle(0, 170, 400, 200, fill = "purple")
+    data.colorlist = []
+    canvas.create_text(40, 50, text = "Points:" + str(data.points))
     #creating the letters....
     for item4 in data.play4:
         canvas.create_text(item4[0], item4[1], text = item4[2])
@@ -337,7 +342,11 @@ def redrawAll(canvas, data):
         canvas.create_text(item2[0], item2[1], text = item2[2])
     for item in data.play:
         canvas.create_text(item[0], item[1], text = item[2])
-
+    print(len(data.play4))
+    print(len(data.play3))
+    if data.play4 == [] and data.play3 == []:
+        print("good job")
+        canvas.create_text(data.width/2, data.height/2, text = "Great job!")
 
 
 def run(width=300, height=300):
