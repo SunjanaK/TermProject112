@@ -9,11 +9,12 @@ import wave
 import threading
 from tkinter import *
 from multiprocessing import Process
+import cv2
+import numpy as np
 
 listy = ["A","A#", "B", "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#"]
-
-#questions for TA's: how to make sure background noise doesn't influence machine, get rid of laggy moments
-#how to keep 2 notes from meeting bc currently, they could meet at a specific time, right?
+#quarter notes: only turns red for every other quarter note
+#green only works for side with half notes
 # PyAudio object.
 # got some pyaudio/aubio merge code from here:
 # https://github.com/aubio/aubio/issues/78
@@ -33,7 +34,7 @@ def tester(): #turn on microphone
     pDetection.set_unit("Hz")
     pDetection.set_silence(-40)
     notelist = []
-    while True and len(notelist) < 15:
+    while True and len(notelist) < 10:
 
         data = stream.read(1024)
         samples = num.fromstring(data,
@@ -48,7 +49,7 @@ def tester(): #turn on microphone
         # print(pitch)
         if 290 < pitch < 300:
             notelist.append("D")
-        elif 425 < pitch < 445 or int(pitch) == 219 :
+        elif 425 < pitch < 445 or 216 < pitch < 225 :
             notelist.append("A")
         elif 259 < pitch < 264:
             notelist.append("C")
@@ -57,7 +58,7 @@ def tester(): #turn on microphone
         elif 305 < pitch < 315:
             notelist.append("D#")
 
-        elif 328 < pitch < 332:
+        elif 320 < pitch < 335:
             notelist.append("E")
 
         elif 345 < pitch < 351:
@@ -66,7 +67,7 @@ def tester(): #turn on microphone
         elif 365 < pitch < 373:
             notelist.append("F#")
 
-        elif 390 < pitch < 396:
+        elif 390 < pitch < 396 or 190 < pitch < 200:
             notelist.append("G")
 
         elif 410 < pitch < 420:
@@ -75,47 +76,140 @@ def tester(): #turn on microphone
         elif 460 < pitch < 470:
             notelist.append("A#")
 
-        elif 490 < pitch < 495:
+        elif 490 < pitch < 495 or 240 < pitch < 253:
             notelist.append("B")
 
         elif pitch == 0.00:
             notelist.append("Q")
     return notelist
-        # if 290 < pitch < 300:
-        #     return "D"
-        # elif 425 < pitch < 445 or int(pitch) == 219 :
-        #     return "A"
-        # elif 259 < pitch < 264:
-        #     return "C"
-        # elif 275 < pitch < 279:
-        #     return "C#"
-        # elif 305 < pitch < 315:
-        #     return "D#"
-        # elif 328 < pitch < 332:
-        #     return "E"
-        # elif 345 < pitch < 351:
-        #     return "F"
-        # elif 365 < pitch < 373:
-        #     return "F#"
-        # elif 390 < pitch < 396:
-        #     return "G"
-        # elif 410 < pitch < 420:
-        #     return "G#"
-        # elif 460 < pitch < 470:
-        #     return "A#"
-        # elif 490 < pitch < 495:
-        #     return "B"
-        # elif pitch == 0.00:
-        #     return "Q"
+
 # print(tester())
 #only gives me points when it registers note correctly
 #how tester works: if any note is played other than note being checked, it stops
 #have to get it to re-record for every falling note if something is played, and make sure the correct note is played only in that instant
+
+
+
+
+
+#it's not reading the last half G for some reason????
+
+def noteparser():
+    notesset = {"Aquart.png","Equart.png", "Ghalf.png", "Cquart.png", "Ahalf.png", "Dquart.png", "Bquart.png", "Gquart.png", "Dhalf.png"}
+    img = cv2.imread("bigtwinkle.png")
+    gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    listy = []
+    listyletter = []
+
+    for note in notesset:
+        template = cv2.imread(note, cv2.IMREAD_GRAYSCALE)
+        w, h = template.shape[::-1]
+        result = cv2.matchTemplate(gray_img, template, cv2.TM_CCOEFF_NORMED)
+        points = set()
+        if "quart" in note:
+            loc = np.where(result >= 0.93)
+            for pt in zip(*loc[::-1]):
+                if pt[0] not in points and pt[0] - 1 not in points and pt[0] - 2 not in points:
+                    points.add(pt[0])
+                    listy.append(pt)
+                    listyletter.append(pt)
+                    listyletter.append(note)
+
+
+        elif "half" in note:
+            loc = np.where(result >= 0.90)
+            for pt in zip(*loc[::-1]):
+                if pt[0] not in points and pt[0] - 1 not in points and pt[0] - 2 not in points:
+                    points.add(pt[0])
+                    listy.append(pt)
+                    listyletter.append(pt)
+                    listyletter.append(note)
+
+    hundred = []
+    twohundred = []
+    threehundred = []
+    fourhundred = []
+    fivehundred = []
+    ycoordslist = []
+    yset = set()
+    for coord in listy:
+        yset.add(coord[1])
+    ylst = sorted(yset)
+    for y in ylst:
+        if 0 < y <= 100:
+            hundred.append(y)
+        elif 100 < y <= 200:
+            twohundred.append(y)
+        elif 200 < y <= 300:
+            threehundred.append(y)
+        elif 300 < y <= 400:
+            fourhundred.append(y)
+        elif 400 < y <= 500:
+            fivehundred.append(y)
+
+    hundredcoords = []
+    twohundredcoords = []
+    threehundredcoords = []
+    fourhundredcoords = []
+    fivehundredcoords = []
+
+    for i in listy:
+        if i[1] in hundred:
+            hundredcoords.append(i)
+        elif i[1] in twohundred:
+            twohundredcoords.append(i)
+        elif i[1] in threehundred:
+            threehundredcoords.append(i)
+        elif i[1] in fourhundred:
+            fourhundredcoords.append(i)
+        elif i[1] in fivehundred:
+            fivehundredcoords.append(i)
+
+
+    ycoordslist.append(sorted(hundredcoords, key=lambda k: [k[0]]))
+    ycoordslist.append(sorted(twohundredcoords, key=lambda k: [k[0]]))
+    ycoordslist.append(sorted(threehundredcoords, key=lambda k: [k[0]]))
+    ycoordslist.append(sorted(fourhundredcoords, key=lambda k: [k[0]]))
+    ycoordslist.append(sorted(fivehundredcoords, key=lambda k: [k[0]]))
+
+    newlist = []
+    for coo in ycoordslist:
+        if len(coo) > 0:
+            for val in coo:
+                newlist.append(val)
+
+
+    alphabet = [] #this is all the notes of the song in order
+    for lettercoord in newlist:
+        if lettercoord in listyletter:
+            c = listyletter.index(lettercoord)
+            alphabet.append(listyletter[c+1])
+    alphabet.append("Ghalf.png")
+    quartlist = []
+    halflist = []
+    mainlist = []
+    for i in range(len(alphabet)):
+        if "quart" in alphabet[i]:
+            quartlist.append(alphabet[i][0])
+            if i % 2 == 1:
+                halflist.append("")
+
+        elif "half" in alphabet[i]:
+            quartlist.append("")
+            quartlist.append("")
+            halflist.append(alphabet[i][0])
+    mainlist.append(quartlist)
+    mainlist.append(halflist)
+    return mainlist
+    # print(mainlist)
+    # return alphabet
+
 def init(data):
+    note = noteparser()
     data.song = ["A", "A#", "B", "B#", "C", "C#", "D", "D#", "E"] #A string
     data.song2 = ["D", "D#", "E", "F", "F#", "G", "G#"] #D string
-    data.song3 = ["G", "G#", "A", "A#", "B", "C", "C#"] #G string
-    data.song4 = ['C', "C#", "D", "D#", "E", "F", "F#"] #C string
+    data.song3 = note[1] #half notes
+    data.song4 = note[0] #quarter notes
     data.timerDelay = 100
     data.counter = 0
     #these are the notes that will be checked off against what pyaudio hears
@@ -124,7 +218,8 @@ def init(data):
     data.play3 = [] #G string
     data.play4 = [] #C string
     #color of circle
-    data.color = "purple"
+
+
     data.points = 0
 
 
@@ -136,19 +231,38 @@ def timerFired(data):
     x3coord = 240 #D string
     x4coord = 320 #A string
 
-    data.counter += 1
-    if data.counter % 20 == 0 and len(data.song4) > 0:
+
+    if data.counter % 5 == 0 and len(data.song4) > 0:
         data.play4.append([xcoord, ycoord, data.song4[0]])
         data.song4.pop(0)
-    elif data.counter % 68 == 0 and len(data.song3) > 0:
+    if data.counter % 10 == 0 and len(data.song3) > 0:
         data.play3.append([x2coord, ycoord, data.song3[0]])
         data.song3.pop(0)
-    elif data.counter % 85 == 0 and len(data.song2) > 0:
-        data.play2.append([x3coord, ycoord, data.song2[0]])
-        data.song2.pop(0)
-    elif data.counter % 100 == 0 and len(data.song) > 0:
-        data.play.append([x4coord, ycoord, data.song[0]])
-        data.song.pop(0)
+    # elif data.counter % 48 == 0 and len(data.song2) > 0:
+    #     data.play2.append([x3coord, ycoord, data.song2[0]])
+    #     data.song2.pop(0)
+    # elif data.counter % 26 == 0 and len(data.song) > 0:
+    #     data.play.append([x4coord, ycoord, data.song[0]])
+    #     data.song.pop(0)
+
+    for item3 in data.play3:
+         # have letter move progressively down screen
+
+        if item3[1] >= 169:
+            if item3[2] in set(tester()):
+                data.color = "green"
+                data.points += 1
+            else:
+                data.color = "red"
+
+
+            data.play3.remove(item3)
+
+
+        else:
+            data.color = "purple"
+            item3[1] += 5
+
 
     for item4 in data.play4:
          # have letter move progressively down screen
@@ -156,10 +270,11 @@ def timerFired(data):
         if item4[1] >= 169:
             if item4[2] in set(tester()):
                 data.color = "green"
+                print("changed!", data.color)
                 data.points += 1
-                print("hi")
             else:
                 data.color = "red"
+                print("changed!", data.color)
 
 
             data.play4.remove(item4)
@@ -169,40 +284,18 @@ def timerFired(data):
             data.color = "purple"
             item4[1] += 5
 
-
-    #
-    #
-    # for item3 in data.play3:
-    #          # have letter move progressively down screen
-    #
-    #     if item3[1] >= 169:
-    #         sound3 = tester()
-    #         if sound3 == "Q" or sound3 != item3[2]:
-    #             data.color = "red"
-    #             print("hello")
-    #         elif sound3 == item3[2]:
-    #             data.color = "green"
-    #             data.points += 1
-    #
-    #         data.play3.remove(item3)
-    #
-    #
-    #     else:
-    #         data.color = "purple"
-    #         item3[1] += 5
     # for item2 in data.play2:
-    #              # have letter move progressively down screen
+    #      # have letter move progressively down screen
     #
     #     if item2[1] >= 169:
-    #         sound2 = tester()
-    #         if sound2 == "Q":
-    #             data.color = "red"
-    #         elif sound2 == item2[2]:
+    #         if item2[2] in set(tester()):
     #             data.color = "green"
     #             data.points += 1
-    #
+    #             print("hi")
     #         else:
     #             data.color = "red"
+    #
+    #
     #         data.play2.remove(item2)
     #
     #
@@ -210,28 +303,29 @@ def timerFired(data):
     #         data.color = "purple"
     #         item2[1] += 5
     #
-    #
     # for item in data.play:
-    #      #have letter move progressively down screen
+    #      # have letter move progressively down screen
     #
     #     if item[1] >= 169:
-    #         sound = tester()
-    #         if sound == "Q":
-    #             data.color = "red"
-    #         elif sound == item[2]: #testing to see if correct note is played
-    #         #when note hits purple circle
-    #             data.color = "green" #circle turns green
-    #             data.points += 1 #adds a point if correct note was played
+    #         if item[2] in set(tester()):
+    #             data.color = "green"
+    #             data.points += 1
+    #             print("hi")
     #         else:
     #             data.color = "red"
+    #
+    #
     #         data.play.remove(item)
+    #
     #
     #     else:
     #         data.color = "purple"
-    #         item[1] += 10
+    #         item[1] += 5
 
+    data.counter += 1
 def redrawAll(canvas, data):
     #creating the four circles
+    print(data.color)
     canvas.create_rectangle(0, 170, 400, 200, fill = data.color)
     canvas.create_text(50, 50, text = data.points)
     #creating the letters....
@@ -289,15 +383,16 @@ def run(width=300, height=300):
     root.mainloop()  # blocks until window is closed
     print("bye!")
 
+
 #threading Pyaudio/Aubio and Tkinter
 if __name__ == "__main__":
-    t1 = threading.Thread(target = tester)
-    t1.start()
+    # t1 = threading.Thread(target = tester)
+    # t1.start()
 
     new = run(400, 200)
     new.mainloop()
     # wait until thread 1 is completely executed
-    t1.join()
+    # t1.join()
 
     # both threads completely executed
     print("Done!")
